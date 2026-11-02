@@ -1,0 +1,217 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metro Route & Fare Planner</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #0f172a;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 540px;
+            background: white;
+            padding: 32px;
+            border-radius: 18px;
+            box-shadow: 0 12px 35px rgba(15, 23, 42, 0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 27px;
+        }
+
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            margin: 18px 0 8px;
+            font-weight: bold;
+        }
+
+        select, button {
+            width: 100%;
+            padding: 13px;
+            border-radius: 9px;
+            font-size: 16px;
+        }
+
+        select {
+            border: 1px solid #cbd5e1;
+            background: white;
+        }
+
+        button {
+            margin-top: 24px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        #result {
+            display: none;
+            margin-top: 24px;
+            padding: 18px;
+            border-radius: 12px;
+            background: #eff6ff;
+            overflow-wrap: anywhere;
+        }
+
+        #route {
+            line-height: 1.8;
+            font-weight: bold;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        #error {
+            color: #b91c1c;
+            margin-top: 16px;
+        }
+
+        .note {
+            margin-top: 24px;
+            font-size: 12px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+<main class="container">
+    <h1>🚇 Metro Route Planner</h1>
+    <p class="subtitle">Find the shortest route and estimate your fare.</p>
+
+    <form id="routeForm">
+        <label for="source">Starting station</label>
+        <select id="source" required>
+            <option value="Central">Central</option>
+            <option value="Museum">Museum</option>
+            <option value="Park">Park</option>
+            <option value="Airport">Airport</option>
+            <option value="Harbor">Harbor</option>
+        </select>
+
+        <label for="destination">Destination station</label>
+        <select id="destination" required>
+            <option value="Airport">Airport</option>
+            <option value="Central">Central</option>
+            <option value="Museum">Museum</option>
+            <option value="Park">Park</option>
+            <option value="Harbor">Harbor</option>
+        </select>
+
+        <button id="findButton" type="submit">Find Shortest Route</button>
+    </form>
+
+    <section id="result" aria-live="polite">
+        <h2>Journey details</h2>
+        <p id="route"></p>
+        <div class="metric">
+            <span>Distance</span>
+            <strong id="distance"></strong>
+        </div>
+        <div class="metric">
+            <span>Estimated fare</span>
+            <strong id="fare"></strong>
+        </div>
+    </section>
+
+    <p id="error" role="alert"></p>
+
+    <p class="note">
+        Demo network and fare rules: ₹10 base fare + ₹5 per kilometre.
+        These are illustrative, not actual metro fares.
+    </p>
+</main>
+
+<script>
+    const form = document.getElementById("routeForm");
+    const sourceSelect = document.getElementById("source");
+    const destinationSelect = document.getElementById("destination");
+    const result = document.getElementById("result");
+    const error = document.getElementById("error");
+    const button = document.getElementById("findButton");
+
+    form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        result.style.display = "none";
+        error.textContent = "";
+        button.disabled = true;
+        button.textContent = "Finding route...";
+
+        try {
+            const source = sourceSelect.value;
+            const destination = destinationSelect.value;
+
+            const params = new URLSearchParams({
+                source: source,
+                destination: destination
+            });
+
+            const response = await fetch(`/api/routes?${params}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Request failed.");
+            }
+
+            if (data.message) {
+                error.textContent = data.message;
+                return;
+            }
+
+            document.getElementById("route").textContent =
+                data.route.join(" → ");
+
+            document.getElementById("distance").textContent =
+                `${data.distanceKm} km`;
+
+            document.getElementById("fare").textContent =
+                `₹${data.fare}`;
+
+            result.style.display = "block";
+        } catch (err) {
+            error.textContent =
+                err.message || "Unable to connect to the server.";
+        } finally {
+            button.disabled = false;
+            button.textContent = "Find Shortest Route";
+        }
+    });
+</script>
+</body>
+</html>
